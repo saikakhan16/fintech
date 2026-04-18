@@ -1,0 +1,1173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>FD Portfolio Optimizer — Powered by Swarm AI</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg: #0a0e1a;
+  --surface: #111827;
+  --surface2: #1a2235;
+  --surface3: #1e2d45;
+  --accent: #00d4ff;
+  --accent2: #7c3aed;
+  --accent3: #10b981;
+  --warn: #f59e0b;
+  --danger: #ef4444;
+  --text: #e2e8f0;
+  --muted: #64748b;
+  --border: rgba(255,255,255,0.06);
+  --glow: 0 0 30px rgba(0,212,255,0.15);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Animated grid background */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.app { position: relative; z-index: 1; }
+
+/* ── NAV ── */
+nav {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 32px;
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(20px);
+  background: rgba(10,14,26,0.8);
+  position: sticky; top: 0; z-index: 100;
+}
+.logo {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800; font-size: 20px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  display: flex; align-items: center; gap: 10px;
+}
+.logo-dot { width: 8px; height: 8px; background: var(--accent); border-radius: 50%; animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.8)} }
+
+.nav-badge {
+  font-family: 'Space Mono', monospace;
+  font-size: 10px; letter-spacing: 2px;
+  color: var(--accent); border: 1px solid var(--accent);
+  padding: 4px 12px; border-radius: 20px;
+  text-transform: uppercase;
+}
+
+/* ── HERO ── */
+.hero {
+  padding: 60px 32px 40px;
+  max-width: 1400px; margin: 0 auto;
+}
+.hero-tag {
+  font-family: 'Space Mono', monospace;
+  font-size: 11px; letter-spacing: 3px; color: var(--accent);
+  text-transform: uppercase; margin-bottom: 16px;
+  display: flex; align-items: center; gap: 8px;
+}
+.hero-tag::before { content:''; width:24px; height:1px; background:var(--accent); }
+.hero h1 {
+  font-family: 'Syne', sans-serif;
+  font-size: clamp(32px, 5vw, 56px);
+  font-weight: 800; line-height: 1.1;
+  margin-bottom: 16px;
+}
+.hero h1 em {
+  font-style: normal;
+  background: linear-gradient(135deg, var(--accent) 0%, #7c3aed 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.hero p { color: var(--muted); font-size: 16px; max-width: 600px; line-height: 1.6; }
+
+/* ── STATS BAR ── */
+.stats-bar {
+  display: flex; gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: 12px; overflow: hidden;
+  margin: 32px 0;
+}
+.stat-item {
+  flex: 1; padding: 20px 24px;
+  background: var(--surface);
+  transition: background 0.2s;
+}
+.stat-item:hover { background: var(--surface2); }
+.stat-label { font-family:'Space Mono',monospace; font-size:10px; letter-spacing:2px; color:var(--muted); text-transform:uppercase; margin-bottom:8px; }
+.stat-val { font-family:'Syne',sans-serif; font-size:24px; font-weight:700; }
+.stat-val.green { color: var(--accent3); }
+.stat-val.blue { color: var(--accent); }
+.stat-val.purple { color: var(--accent2); }
+.stat-delta { font-size:12px; color:var(--accent3); margin-top:4px; }
+
+/* ── MAIN GRID ── */
+.main-grid {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: 24px;
+  padding: 0 32px 32px;
+  max-width: 1400px; margin: 0 auto;
+}
+
+/* ── PANEL ── */
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+}
+.panel-header {
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.panel-title {
+  font-family: 'Syne', sans-serif;
+  font-weight: 700; font-size: 15px;
+  display: flex; align-items: center; gap: 8px;
+}
+.panel-icon { font-size: 18px; }
+.panel-body { padding: 24px; }
+
+/* ── FORM ── */
+.form-group { margin-bottom: 20px; }
+label {
+  display: block;
+  font-family: 'Space Mono', monospace;
+  font-size: 10px; letter-spacing: 2px;
+  color: var(--muted); text-transform: uppercase;
+  margin-bottom: 8px;
+}
+input[type="range"] {
+  width: 100%; height: 4px;
+  background: var(--surface3);
+  border-radius: 2px; outline: none; border: none;
+  cursor: pointer; accent-color: var(--accent);
+}
+.range-val {
+  font-family: 'Syne', sans-serif;
+  font-size: 22px; font-weight: 700;
+  color: var(--accent); margin-top: 8px;
+}
+.seg-control {
+  display: flex; gap: 4px;
+  background: var(--surface2); border-radius: 8px; padding: 4px;
+}
+.seg-btn {
+  flex: 1; padding: 8px 12px;
+  background: transparent;
+  border: none; border-radius: 6px;
+  color: var(--muted); font-family: 'DM Sans', sans-serif;
+  font-size: 13px; cursor: pointer;
+  transition: all 0.2s;
+}
+.seg-btn.active {
+  background: var(--accent);
+  color: #000; font-weight: 600;
+}
+
+.optimize-btn {
+  width: 100%; padding: 16px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border: none; border-radius: 12px;
+  color: #fff; font-family: 'Syne', sans-serif;
+  font-size: 15px; font-weight: 700;
+  cursor: pointer; margin-top: 8px;
+  position: relative; overflow: hidden;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.optimize-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(0,212,255,0.3);
+}
+.optimize-btn:active { transform: translateY(0); }
+.optimize-btn.loading { pointer-events: none; opacity: 0.7; }
+
+/* swarm animation */
+.swarm-visual {
+  position: relative; height: 120px;
+  background: var(--surface2); border-radius: 12px;
+  overflow: hidden; margin-bottom: 20px;
+}
+.particle {
+  position: absolute; width: 4px; height: 4px;
+  border-radius: 50%; background: var(--accent);
+  animation: swarm-fly 3s ease-in-out infinite;
+  opacity: 0;
+}
+@keyframes swarm-fly {
+  0% { opacity: 0; transform: translate(0,0); }
+  20% { opacity: 1; }
+  80% { opacity: 0.8; }
+  100% { opacity: 0; transform: translate(var(--dx), var(--dy)); }
+}
+.swarm-label {
+  position: absolute; bottom: 10px; left: 50%;
+  transform: translateX(-50%);
+  font-family: 'Space Mono', monospace;
+  font-size: 10px; letter-spacing: 2px;
+  color: var(--accent); text-transform: uppercase;
+  opacity: 0.7;
+}
+
+/* ── RESULT TABS ── */
+.tabs {
+  display: flex; gap: 0;
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+}
+.tab {
+  padding: 14px 20px;
+  font-family: 'DM Sans', sans-serif; font-size: 14px;
+  color: var(--muted); cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+  background: none; border-top: none; border-left: none; border-right: none;
+}
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.tab-panel { display: none; padding: 24px; }
+.tab-panel.active { display: block; }
+
+/* ── ALLOCATION TABLE ── */
+.alloc-row {
+  display: grid;
+  grid-template-columns: 1fr 100px 100px 80px 80px;
+  gap: 12px; align-items: center;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+  animation: fadeInUp 0.4s ease forwards;
+  opacity: 0;
+}
+.alloc-row:last-child { border-bottom: none; }
+@keyframes fadeInUp { to { opacity:1; transform:translateY(0); } from { opacity:0; transform:translateY(10px); } }
+
+.bank-info { display: flex; align-items: center; gap: 12px; }
+.bank-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.bank-name { font-weight: 500; font-size: 14px; }
+.bank-type { font-size: 11px; color: var(--muted); }
+
+.amount-col { font-family: 'Space Mono', monospace; font-size: 13px; text-align: right; }
+.rate-col { color: var(--accent3); font-weight: 600; font-size: 14px; text-align: right; }
+.weight-col { text-align: right; }
+.weight-bar { height: 4px; background: var(--surface3); border-radius: 2px; margin-top: 4px; }
+.weight-fill { height: 100%; border-radius: 2px; background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+
+.badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; }
+.badge-green { background: rgba(16,185,129,0.15); color: var(--accent3); }
+.badge-yellow { background: rgba(245,158,11,0.15); color: var(--warn); }
+.badge-purple { background: rgba(124,58,237,0.15); color: #a78bfa; }
+
+/* ── RESULT SUMMARY ── */
+.result-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px; margin-bottom: 24px;
+}
+.result-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 12px; padding: 16px;
+}
+.result-card .val {
+  font-family: 'Syne', sans-serif;
+  font-size: 22px; font-weight: 700; margin-top: 4px;
+}
+
+/* ── CHART CONTAINERS ── */
+.chart-wrap {
+  position: relative;
+  background: var(--surface2);
+  border-radius: 12px; padding: 20px;
+  margin-bottom: 16px;
+}
+.chart-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 13px; font-weight: 600;
+  color: var(--muted); margin-bottom: 16px;
+  text-transform: uppercase; letter-spacing: 1px;
+}
+
+/* ── CONVERGENCE ── */
+.convergence-bar-wrap { margin-bottom: 12px; }
+.conv-label { display:flex; justify-content:space-between; font-size:12px; color:var(--muted); margin-bottom:6px; }
+.conv-bar { height: 6px; background: var(--surface3); border-radius: 3px; overflow: hidden; }
+.conv-fill {
+  height: 100%; border-radius: 3px;
+  background: linear-gradient(90deg, var(--accent2), var(--accent));
+  transition: width 1s ease;
+}
+
+/* ── RBI SIGNAL ── */
+.rbi-card {
+  background: linear-gradient(135deg, rgba(124,58,237,0.1), rgba(0,212,255,0.1));
+  border: 1px solid rgba(0,212,255,0.2);
+  border-radius: 12px; padding: 20px;
+  margin-bottom: 16px;
+}
+.rbi-signal {
+  font-family: 'Space Mono', monospace;
+  font-size: 11px; letter-spacing: 2px; color: var(--accent3);
+  text-transform: uppercase; margin-bottom: 8px;
+}
+.rbi-rec {
+  font-family: 'Syne', sans-serif;
+  font-size: 20px; font-weight: 800; color: var(--accent);
+  margin-bottom: 8px;
+}
+.rbi-text { font-size: 13px; color: var(--muted); line-height: 1.6; }
+
+/* ── LADDER ── */
+.ladder-item {
+  display: flex; align-items: center; gap: 16px;
+  padding: 12px 0; border-bottom: 1px solid var(--border);
+}
+.ladder-rung {
+  width: 48px; height: 48px;
+  background: var(--surface3); border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Space Mono', monospace; font-size: 11px;
+  color: var(--accent); flex-shrink: 0;
+}
+.ladder-info { flex: 1; }
+.ladder-bank { font-size: 13px; font-weight: 500; }
+.ladder-amount { font-family: 'Space Mono', monospace; font-size: 12px; color: var(--muted); margin-top: 2px; }
+.ladder-return { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; color: var(--accent3); }
+
+/* ── TAX BOX ── */
+.tax-advice-item {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 0; border-bottom: 1px solid var(--border);
+  font-size: 13px; line-height: 1.5; color: var(--muted);
+}
+.tax-advice-item::before { content:'→'; color:var(--accent); flex-shrink:0; margin-top:1px; }
+
+/* ── EMPTY STATE ── */
+.empty-state {
+  text-align: center; padding: 60px 20px;
+  color: var(--muted);
+}
+.empty-state .icon { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
+.empty-state h3 { font-family:'Syne',sans-serif; font-size:18px; color:var(--text); margin-bottom:8px; }
+.empty-state p { font-size:14px; line-height:1.6; }
+
+/* ── SWARM SCORE ── */
+.swarm-score {
+  display: flex; align-items: center; gap: 16px;
+  background: var(--surface2); border-radius: 12px; padding: 16px;
+  margin-bottom: 16px;
+}
+.swarm-score-val {
+  font-family: 'Space Mono', monospace; font-size: 28px; color: var(--accent);
+}
+.swarm-score-label { font-size: 12px; color: var(--muted); line-height: 1.5; }
+
+/* ── COMPARISON BARS ── */
+.compare-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 0; border-bottom: 1px solid var(--border);
+}
+.compare-bank { width: 120px; font-size: 12px; color: var(--muted); }
+.compare-bar-wrap { flex: 1; }
+.compare-bar-bg { height: 8px; background: var(--surface3); border-radius: 4px; overflow: hidden; }
+.compare-bar-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--accent3), var(--accent)); transition: width 1s ease 0.3s; }
+.compare-rate { width: 50px; text-align: right; font-family:'Space Mono',monospace; font-size:12px; color:var(--accent3); }
+
+/* ── LOADING ── */
+.loading-overlay {
+  display: none;
+  position: absolute; inset: 0;
+  background: rgba(10,14,26,0.9);
+  border-radius: 16px;
+  flex-direction: column; align-items: center; justify-content: center;
+  z-index: 10;
+}
+.loading-overlay.show { display: flex; }
+.loader {
+  width: 60px; height: 60px;
+  position: relative; margin-bottom: 16px;
+}
+.loader-ring {
+  position: absolute; inset: 0;
+  border: 2px solid transparent;
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+.loader-ring:nth-child(2) {
+  inset: 8px;
+  border-top-color: var(--accent2);
+  animation-duration: 0.7s;
+  animation-direction: reverse;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text { font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 2px; color: var(--accent); animation: blink 1s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 2px; }
+
+/* responsive */
+@media (max-width: 900px) {
+  .main-grid { grid-template-columns: 1fr; }
+  .stats-bar { flex-wrap: wrap; }
+  .result-grid { grid-template-columns: repeat(2, 1fr); }
+  .alloc-row { grid-template-columns: 1fr 80px 70px; }
+  .alloc-row .weight-col, .alloc-row .amount-col:last-child { display: none; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- NAV -->
+<nav>
+  <div class="logo">
+    <div class="logo-dot"></div>
+    FD Optimizer
+  </div>
+  <div style="display:flex;align-items:center;gap:16px">
+    <span class="nav-badge">PSO Engine v2.0</span>
+    <div id="userBadge" style="font-size:13px;color:var(--muted)"></div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-tag">Powered by Particle Swarm Optimization</div>
+  <h1>Maximize Your FD Returns<br><em>With Swarm Intelligence</em></h1>
+  <p>60 AI particles fly through 8-dimensional bank-space simultaneously, converging on your optimal portfolio in milliseconds — while keeping every rupee DICGC insured.</p>
+
+  <!-- STATS BAR -->
+  <div class="stats-bar">
+    <div class="stat-item">
+      <div class="stat-label">Best FD Rate Today</div>
+      <div class="stat-val blue">8.55%</div>
+      <div class="stat-delta">↑ Bajaj Finance · 24M</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-label">Bank Partners</div>
+      <div class="stat-val purple">8 Banks</div>
+      <div class="stat-delta">SFBs + NBFCs</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-label">DICGC Cover</div>
+      <div class="stat-val green">₹5L / Bank</div>
+      <div class="stat-delta">Fully Insured</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-label">RBI Signal</div>
+      <div class="stat-val blue" id="rbiSignalStat">HOLD</div>
+      <div class="stat-delta">Book Now Window</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-label">Swarm Particles</div>
+      <div class="stat-val purple">60</div>
+      <div class="stat-delta">200 iterations</div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN GRID -->
+<div class="main-grid">
+
+  <!-- LEFT: INPUT PANEL -->
+  <div>
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">
+          <span class="panel-icon">⚙️</span>
+          Portfolio Configuration
+        </div>
+      </div>
+      <div class="panel-body">
+
+        <!-- Swarm Animation -->
+        <div class="swarm-visual" id="swarmViz">
+          <div class="swarm-label" id="swarmStatus">SWARM READY</div>
+        </div>
+
+        <!-- Amount Slider -->
+        <div class="form-group">
+          <label>Total Investment Amount</label>
+          <input type="range" id="amountSlider" min="50000" max="5000000" step="50000" value="1000000"/>
+          <div class="range-val" id="amountDisplay">₹10,00,000</div>
+        </div>
+
+        <!-- Tenure -->
+        <div class="form-group">
+          <label>Investment Tenure</label>
+          <div class="seg-control" id="tenureCtrl">
+            <button class="seg-btn" data-val="3">3M</button>
+            <button class="seg-btn" data-val="6">6M</button>
+            <button class="seg-btn active" data-val="12">12M</button>
+            <button class="seg-btn" data-val="18">18M</button>
+            <button class="seg-btn" data-val="24">24M</button>
+          </div>
+        </div>
+
+        <!-- Risk Profile -->
+        <div class="form-group">
+          <label>Risk Profile</label>
+          <div class="seg-control" id="riskCtrl">
+            <button class="seg-btn active" data-val="conservative">Safe</button>
+            <button class="seg-btn" data-val="moderate">Balanced</button>
+            <button class="seg-btn" data-val="aggressive">Growth</button>
+          </div>
+        </div>
+
+        <!-- Convergence Progress (shown during optimization) -->
+        <div id="convergenceWrap" style="display:none;margin-bottom:20px">
+          <label>Swarm Convergence</label>
+          <div class="convergence-bar-wrap" id="convBars"></div>
+        </div>
+
+        <button class="optimize-btn" id="optimizeBtn" onclick="runOptimization()">
+          🚀 Launch Swarm Optimizer
+        </button>
+
+        <div style="margin-top:20px">
+          <div class="rbi-card" id="rbiCard">
+            <div class="rbi-signal">🏦 RBI Rate Signal</div>
+            <div class="rbi-rec" id="rbiRec">BOOK NOW</div>
+            <div class="rbi-text" id="rbiText">Loading RBI analysis...</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: RESULTS PANEL -->
+  <div>
+    <div class="panel" style="position:relative;min-height:500px">
+
+      <div class="loading-overlay" id="loadingOverlay">
+        <div class="loader">
+          <div class="loader-ring"></div>
+          <div class="loader-ring"></div>
+        </div>
+        <div class="loading-text" id="loadingText">INITIALIZING SWARM</div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab('allocation',this)">Allocation</button>
+        <button class="tab" onclick="switchTab('charts',this)">Charts</button>
+        <button class="tab" onclick="switchTab('ladder',this)">Ladder</button>
+        <button class="tab" onclick="switchTab('tax',this)">Tax & Tips</button>
+        <button class="tab" onclick="switchTab('compare',this)">Compare</button>
+      </div>
+
+      <!-- ALLOCATION TAB -->
+      <div class="tab-panel active" id="tab-allocation">
+        <div id="allocationContent">
+          <div class="empty-state">
+            <div class="icon">🐝</div>
+            <h3>Swarm Awaiting Instructions</h3>
+            <p>Configure your portfolio above and launch the optimizer. 60 particles will search for your optimal allocation across 8 banks simultaneously.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- CHARTS TAB -->
+      <div class="tab-panel" id="tab-charts">
+        <div id="chartsContent">
+          <div class="empty-state">
+            <div class="icon">📊</div>
+            <h3>Run Optimization First</h3>
+            <p>Charts will appear after the swarm finds your optimal portfolio.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- LADDER TAB -->
+      <div class="tab-panel" id="tab-ladder">
+        <div id="ladderContent">
+          <div class="empty-state">
+            <div class="icon">🪜</div>
+            <h3>Ladder Strategy</h3>
+            <p>An FD ladder splits your investment across multiple tenures so money matures at regular intervals — providing liquidity without sacrificing returns.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAX TAB -->
+      <div class="tab-panel" id="tab-tax">
+        <div id="taxContent">
+          <div class="empty-state">
+            <div class="icon">📋</div>
+            <h3>Tax Optimization</h3>
+            <p>After optimization, get personalized Form 15G/15H reminders and tax-saving tips.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- COMPARE TAB -->
+      <div class="tab-panel" id="tab-compare">
+        <div id="compareContent">
+          <div style="margin-bottom:20px">
+            <div class="chart-title">All Banks — Rate Comparison</div>
+            <div id="compareBars"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+</div>
+
+<script>
+// ── STATE ────────────────────────────────────────────────────────────────────
+let state = {
+  amount: 1000000,
+  tenure: 12,
+  risk: 'conservative',
+  result: null,
+  charts: {}
+};
+
+const FD_BANKS = [
+  { id:'suryoday', name:'Suryoday SFB', type:'Small Finance Bank', rating:'AA', color:'#FF6B35',
+    rates:{3:6.75,6:7.25,9:7.50,12:8.25,18:8.50,24:8.35,36:8.10} },
+  { id:'unity', name:'Unity SFB', type:'Small Finance Bank', rating:'AA', color:'#4ECDC4',
+    rates:{3:6.50,6:7.00,9:7.35,12:8.15,18:8.40,24:8.20,36:7.90} },
+  { id:'utkarsh', name:'Utkarsh SFB', type:'Small Finance Bank', rating:'AA', color:'#45B7D1',
+    rates:{3:6.60,6:7.10,9:7.40,12:8.10,18:8.30,24:8.15,36:7.85} },
+  { id:'shivalik', name:'Shivalik SFB', type:'Small Finance Bank', rating:'A+', color:'#96CEB4',
+    rates:{3:6.40,6:6.90,9:7.25,12:8.00,18:8.20,24:8.00,36:7.75} },
+  { id:'shriram', name:'Shriram Finance', type:'NBFC', rating:'AA+', color:'#FFEAA7',
+    rates:{3:7.00,6:7.50,9:7.75,12:8.30,18:8.45,24:8.50,36:8.25} },
+  { id:'bajaj', name:'Bajaj Finance', type:'NBFC', rating:'AAA', color:'#DDA0DD',
+    rates:{3:7.15,6:7.60,9:7.80,12:8.35,18:8.50,24:8.55,36:8.30} },
+  { id:'mahindra', name:'Mahindra Finance', type:'NBFC', rating:'AA+', color:'#F0E68C',
+    rates:{3:6.90,6:7.40,9:7.65,12:8.20,18:8.35,24:8.40,36:8.15} },
+  { id:'jana', name:'Jana SFB', type:'Small Finance Bank', rating:'A+', color:'#87CEEB',
+    rates:{3:6.30,6:6.85,9:7.20,12:7.90,18:8.10,24:7.95,36:7.65} }
+];
+
+const DICGC_LIMIT = 500000;
+
+// ── PSO ENGINE (JS port) ──────────────────────────────────────────────────────
+class PSOOptimizer {
+  constructor(amount, risk, tenure) {
+    this.amount = amount;
+    this.risk = risk;
+    this.tenure = tenure;
+    this.nBanks = FD_BANKS.length;
+    this.nParticles = 60;
+    this.maxIter = 200;
+    this.W = 0.729; this.C1 = 1.494; this.C2 = 1.494;
+    this.riskLimits = { conservative:0.20, moderate:0.35, aggressive:0.50 };
+    this.convergence = [];
+  }
+
+  getRate(bank) {
+    const t = this.tenure;
+    if (bank.rates[t]) return bank.rates[t];
+    const keys = Object.keys(bank.rates).map(Number);
+    const closest = keys.reduce((a,b) => Math.abs(b-t) < Math.abs(a-t) ? b : a);
+    return bank.rates[closest];
+  }
+
+  normalize(pos) {
+    const clipped = pos.map(p => Math.max(0.001, p));
+    const total = clipped.reduce((a,b) => a+b, 0);
+    return clipped.map(p => p / total);
+  }
+
+  fitness(pos) {
+    const amounts = pos.map(w => w * this.amount);
+    let totalReturn = 0;
+    FD_BANKS.forEach((bank, i) => {
+      const rate = this.getRate(bank);
+      totalReturn += amounts[i] * (rate/100) * (this.tenure/12);
+    });
+    const normReturn = totalReturn / this.amount;
+
+    // DICGC penalty
+    let dicgcPenalty = 0;
+    amounts.forEach(a => {
+      if (a > DICGC_LIMIT) dicgcPenalty += ((a - DICGC_LIMIT) / this.amount) * 2.0;
+    });
+
+    // Concentration penalty
+    const maxConc = this.riskLimits[this.risk] || 0.35;
+    let concPenalty = 0;
+    pos.forEach(w => { if (w > maxConc) concPenalty += (w - maxConc) * 1.5; });
+
+    // Entropy bonus
+    const entropy = -pos.reduce((s, w) => s + w * Math.log(w + 1e-10), 0);
+    const maxEntropy = Math.log(this.nBanks);
+    const divBonus = (entropy / maxEntropy) * 0.02;
+
+    // Rating bonus
+    const ratingScore = {AAA:0.01, 'AA+':0.008, AA:0.006, 'A+':0.004, A:0.002};
+    let ratingBonus = 0;
+    FD_BANKS.forEach((b, i) => { ratingBonus += pos[i] * (ratingScore[b.rating] || 0.002); });
+
+    return normReturn - dicgcPenalty - concPenalty + divBonus + ratingBonus;
+  }
+
+  randomPos() {
+    const raw = Array.from({length:this.nBanks}, () => Math.random());
+    return this.normalize(raw);
+  }
+
+  optimize(onProgress) {
+    // Initialize
+    const particles = Array.from({length:this.nParticles}, () => {
+      const pos = this.randomPos();
+      const vel = Array.from({length:this.nBanks}, () => (Math.random()-0.5)*0.2);
+      const score = this.fitness(pos);
+      return { pos, vel, bestPos:[...pos], bestScore:score };
+    });
+
+    let globalBest = [...particles[0].bestPos];
+    let globalBestScore = particles[0].bestScore;
+    particles.forEach(p => {
+      if (p.bestScore > globalBestScore) {
+        globalBestScore = p.bestScore;
+        globalBest = [...p.bestPos];
+      }
+    });
+
+    for (let iter = 0; iter < this.maxIter; iter++) {
+      const w = this.W * (1 - iter / this.maxIter * 0.4);
+      particles.forEach(p => {
+        const newVel = p.vel.map((v, d) => {
+          const r1 = Math.random(), r2 = Math.random();
+          const cog = this.C1 * r1 * (p.bestPos[d] - p.pos[d]);
+          const soc = this.C2 * r2 * (globalBest[d] - p.pos[d]);
+          return Math.max(-0.2, Math.min(0.2, w*v + cog + soc));
+        });
+        const newPos = this.normalize(p.pos.map((x,d) => x + newVel[d]));
+        const score = this.fitness(newPos);
+        p.vel = newVel; p.pos = newPos;
+        if (score > p.bestScore) { p.bestScore = score; p.bestPos = [...newPos]; }
+        if (score > globalBestScore) { globalBestScore = score; globalBest = [...newPos]; }
+      });
+      this.convergence.push(globalBestScore);
+      if (onProgress && iter % 20 === 0) onProgress(iter / this.maxIter);
+    }
+
+    return this.buildResult(globalBest, globalBestScore);
+  }
+
+  buildResult(weights, score) {
+    let totalInterest = 0;
+    const allocation = FD_BANKS.map((bank, i) => {
+      const amount = weights[i] * this.amount;
+      const rate = this.getRate(bank);
+      const interest = amount * (rate/100) * (this.tenure/12);
+      totalInterest += interest;
+      return {
+        bank_name: bank.name, bank_id: bank.id, color: bank.color,
+        allocated_amount: Math.round(amount),
+        weight_percent: Math.round(weights[i]*1000)/10,
+        interest_rate: rate,
+        interest_earned: Math.round(interest),
+        maturity_amount: Math.round(amount + interest),
+        dicgc_insured: amount <= DICGC_LIMIT,
+        rating: bank.rating, type: bank.type,
+        tenure_months: this.tenure
+      };
+    }).sort((a,b) => b.allocated_amount - a.allocated_amount);
+
+    const annualReturn = (totalInterest / this.amount) * (12/this.tenure) * 100;
+    return {
+      allocation, optimization_score: score,
+      total_investment: this.amount,
+      total_interest_earned: Math.round(totalInterest),
+      total_maturity_amount: Math.round(this.amount + totalInterest),
+      expected_annual_return: Math.round(annualReturn*100)/100,
+      dicgc_compliance: allocation.every(a => a.dicgc_insured),
+      num_banks_used: allocation.filter(a => a.weight_percent > 2).length,
+      convergence: this.convergence
+    };
+  }
+
+  buildLadder(allocation) {
+    const ladder = [];
+    const tenures = [3,6,9,12], splits = [0.20,0.25,0.25,0.30];
+    allocation.slice(0,4).forEach(alloc => {
+      const bank = FD_BANKS.find(b => b.id === alloc.bank_id);
+      tenures.forEach((t, idx) => {
+        const amt = alloc.allocated_amount * splits[idx];
+        const rate = bank.rates[t] || bank.rates[12];
+        const interest = amt * (rate/100) * (t/12);
+        ladder.push({ bank: alloc.bank_name, tenure_months: t, amount: Math.round(amt),
+          rate, maturity_amount: Math.round(amt+interest), color: alloc.color });
+      });
+    });
+    return ladder.sort((a,b) => a.tenure_months - b.tenure_months);
+  }
+}
+
+// ── UI HELPERS ────────────────────────────────────────────────────────────────
+function fmt(n) { return '₹' + Number(n).toLocaleString('en-IN'); }
+function fmtPct(n) { return n.toFixed(2) + '%'; }
+
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-'+name).classList.add('active');
+}
+
+// ── SWARM PARTICLES VIZ ───────────────────────────────────────────────────────
+function spawnParticles(active) {
+  const viz = document.getElementById('swarmViz');
+  // clear old
+  viz.querySelectorAll('.particle').forEach(p => p.remove());
+  if (!active) {
+    document.getElementById('swarmStatus').textContent = 'SWARM READY';
+    return;
+  }
+  document.getElementById('swarmStatus').textContent = 'SWARM FLYING...';
+  for (let i = 0; i < 30; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    const x = Math.random()*100, y = Math.random()*100;
+    p.style.left = x + '%'; p.style.top = y + '%';
+    const dx = (Math.random()-0.5)*200, dy = (Math.random()-0.5)*120;
+    p.style.setProperty('--dx', dx+'px');
+    p.style.setProperty('--dy', dy+'px');
+    p.style.animationDelay = (Math.random()*2) + 's';
+    p.style.animationDuration = (1.5 + Math.random()*2) + 's';
+    p.style.background = Math.random() > 0.5 ? 'var(--accent)' : 'var(--accent2)';
+    viz.appendChild(p);
+  }
+}
+
+// ── CONTROLS ──────────────────────────────────────────────────────────────────
+document.getElementById('amountSlider').addEventListener('input', function() {
+  state.amount = parseInt(this.value);
+  document.getElementById('amountDisplay').textContent = fmt(state.amount);
+});
+
+document.getElementById('tenureCtrl').addEventListener('click', function(e) {
+  if (!e.target.classList.contains('seg-btn')) return;
+  this.querySelectorAll('.seg-btn').forEach(b => b.classList.remove('active'));
+  e.target.classList.add('active');
+  state.tenure = parseInt(e.target.dataset.val);
+});
+
+document.getElementById('riskCtrl').addEventListener('click', function(e) {
+  if (!e.target.classList.contains('seg-btn')) return;
+  this.querySelectorAll('.seg-btn').forEach(b => b.classList.remove('active'));
+  e.target.classList.add('active');
+  state.risk = e.target.dataset.val;
+});
+
+// ── MAIN OPTIMIZATION ──────────────────────────────────────────────────────────
+async function runOptimization() {
+  const btn = document.getElementById('optimizeBtn');
+  btn.classList.add('loading');
+  btn.textContent = '🔄 Swarm Running...';
+  document.getElementById('loadingOverlay').classList.add('show');
+  spawnParticles(true);
+
+  const loadingMsgs = [
+    'INITIALIZING SWARM',
+    'PARTICLES EXPLORING...',
+    'CONVERGING ON OPTIMUM',
+    'FINALIZING ALLOCATION'
+  ];
+  let msgIdx = 0;
+  const msgInterval = setInterval(() => {
+    document.getElementById('loadingText').textContent = loadingMsgs[msgIdx++ % loadingMsgs.length];
+  }, 600);
+
+  // Run PSO in next tick so UI updates
+  await new Promise(resolve => setTimeout(resolve, 100));
+
+  const pso = new PSOOptimizer(state.amount, state.risk, state.tenure);
+  const result = pso.optimize();
+  const ladder = pso.buildLadder(result.allocation);
+  result.ladder = ladder;
+  result.tax = getTaxAdvice(state.amount, result.expected_annual_return);
+  state.result = result;
+
+  clearInterval(msgInterval);
+  document.getElementById('loadingOverlay').classList.remove('show');
+  btn.classList.remove('loading');
+  btn.textContent = '✅ Re-Optimize';
+  spawnParticles(false);
+  document.getElementById('swarmStatus').textContent = `CONVERGED · Score: ${result.optimization_score.toFixed(4)}`;
+
+  renderAllocation(result);
+  renderCharts(result);
+  renderLadder(result.ladder);
+  renderTax(result.tax);
+  renderCompare();
+}
+
+function getTaxAdvice(amount, annualReturn) {
+  const interest = amount * (annualReturn/100);
+  const tdsThreshold = 40000;
+  const advice = [];
+  const forms = [];
+  if (interest < tdsThreshold) {
+    advice.push('Your interest income is below the TDS threshold of ₹40,000 — no TDS will be deducted automatically.');
+  } else {
+    const tds = interest * 0.10;
+    advice.push(`Estimated TDS: ${fmt(Math.round(tds))} will be deducted at 10% by banks.`);
+    advice.push('Submit Form 15G (if your total income is below the taxable limit) to prevent TDS deduction.');
+    forms.push('Form 15G');
+  }
+  if (amount > 500000) advice.push('Your investment exceeds ₹5 lakh — the PSO has already split this across banks for full DICGC coverage.');
+  if (interest > 200000) advice.push('Consider distributing FD bookings across two financial years to reduce tax liability in a single year.');
+  advice.push('Senior citizens (60+) enjoy a higher TDS threshold of ₹50,000 and often earn 0.25–0.50% extra on FD rates.');
+  return { interest: Math.round(interest), tds: interest >= tdsThreshold, forms, advice };
+}
+
+// ── RENDER FUNCTIONS ──────────────────────────────────────────────────────────
+function renderAllocation(result) {
+  const el = document.getElementById('allocationContent');
+  const r = result;
+
+  const summaryCards = `
+    <div class="result-grid">
+      <div class="result-card">
+        <div class="stat-label">Maturity Amount</div>
+        <div class="val blue">${fmt(r.total_maturity_amount)}</div>
+      </div>
+      <div class="result-card">
+        <div class="stat-label">Interest Earned</div>
+        <div class="val green">${fmt(r.total_interest_earned)}</div>
+      </div>
+      <div class="result-card">
+        <div class="stat-label">Effective Return</div>
+        <div class="val purple">${fmtPct(r.expected_annual_return)} p.a.</div>
+      </div>
+    </div>
+    <div class="swarm-score">
+      <div class="swarm-score-val">${r.optimization_score.toFixed(4)}</div>
+      <div class="swarm-score-label">
+        <strong>PSO Fitness Score</strong><br>
+        ${r.num_banks_used} banks · ${r.tenure_months}M tenure · ${r.dicgc_compliance ? '✅ Fully DICGC Insured' : '⚠️ Partial DICGC'}
+      </div>
+    </div>
+  `;
+
+  const headers = `
+    <div class="alloc-row" style="opacity:1;border-bottom:1px solid var(--accent);padding-bottom:8px;margin-bottom:4px">
+      <div style="font-family:Space Mono,monospace;font-size:10px;color:var(--muted)">BANK</div>
+      <div style="font-family:Space Mono,monospace;font-size:10px;color:var(--muted);text-align:right">AMOUNT</div>
+      <div style="font-family:Space Mono,monospace;font-size:10px;color:var(--muted);text-align:right">MATURITY</div>
+      <div style="font-family:Space Mono,monospace;font-size:10px;color:var(--muted);text-align:right">RATE</div>
+      <div style="font-family:Space Mono,monospace;font-size:10px;color:var(--muted);text-align:right">WEIGHT</div>
+    </div>
+  `;
+
+  const rows = r.allocation.map((a, idx) => `
+    <div class="alloc-row" style="animation-delay:${idx*0.05}s">
+      <div class="bank-info">
+        <div class="bank-dot" style="background:${a.color}"></div>
+        <div>
+          <div class="bank-name">${a.bank_name}</div>
+          <div class="bank-type">${a.type} · ${a.rating} · ${a.dicgc_insured ? '<span class="badge badge-green">DICGC</span>' : '<span class="badge badge-yellow">NBFC</span>'}</div>
+        </div>
+      </div>
+      <div class="amount-col">${fmt(a.allocated_amount)}</div>
+      <div class="amount-col green" style="color:var(--accent3)">${fmt(a.maturity_amount)}</div>
+      <div class="rate-col">${a.interest_rate}%</div>
+      <div class="weight-col">
+        <div style="font-size:12px;font-family:Space Mono,monospace">${a.weight_percent}%</div>
+        <div class="weight-bar"><div class="weight-fill" style="width:${a.weight_percent}%"></div></div>
+      </div>
+    </div>
+  `).join('');
+
+  el.innerHTML = summaryCards + headers + rows;
+}
+
+function renderCharts(result) {
+  const el = document.getElementById('chartsContent');
+  el.innerHTML = `
+    <div class="chart-wrap">
+      <div class="chart-title">Portfolio Allocation by Bank</div>
+      <canvas id="allocPieChart" height="220"></canvas>
+    </div>
+    <div class="chart-wrap">
+      <div class="chart-title">PSO Convergence — Fitness Over Iterations</div>
+      <canvas id="convLineChart" height="160"></canvas>
+    </div>
+  `;
+
+  // Destroy old charts
+  Object.values(state.charts).forEach(c => c.destroy());
+  state.charts = {};
+
+  const activeAlloc = result.allocation.filter(a => a.weight_percent > 1);
+
+  state.charts.pie = new Chart(document.getElementById('allocPieChart'), {
+    type: 'doughnut',
+    data: {
+      labels: activeAlloc.map(a => a.bank_name),
+      datasets: [{
+        data: activeAlloc.map(a => a.weight_percent),
+        backgroundColor: activeAlloc.map(a => a.color + 'CC'),
+        borderColor: activeAlloc.map(a => a.color),
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { position:'right', labels: { color:'#e2e8f0', font:{family:'DM Sans',size:11} } },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.raw}%` } }
+      },
+      cutout: '60%'
+    }
+  });
+
+  // Sample convergence every 4th point for readability
+  const convData = result.convergence.filter((_,i) => i%4===0);
+  state.charts.line = new Chart(document.getElementById('convLineChart'), {
+    type: 'line',
+    data: {
+      labels: convData.map((_,i) => i*4),
+      datasets: [{
+        label: 'Global Best Fitness',
+        data: convData,
+        borderColor: '#00d4ff',
+        backgroundColor: 'rgba(0,212,255,0.05)',
+        fill: true, tension: 0.4, pointRadius: 0, borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display:false } },
+      scales: {
+        x: { grid:{color:'rgba(255,255,255,0.03)'}, ticks:{color:'#64748b',font:{size:10}} },
+        y: { grid:{color:'rgba(255,255,255,0.03)'}, ticks:{color:'#64748b',font:{size:10},callback:v=>v.toFixed(4)} }
+      }
+    }
+  });
+}
+
+function renderLadder(ladder) {
+  const el = document.getElementById('ladderContent');
+  const grouped = [3,6,9,12].map(t => ({
+    tenure: t,
+    items: ladder.filter(l => l.tenure_months === t)
+  }));
+
+  const totalLadder = ladder.reduce((s,l) => s + l.amount, 0);
+  const totalReturn = ladder.reduce((s,l) => s + l.maturity_amount, 0);
+
+  el.innerHTML = `
+    <div class="rbi-card" style="margin-bottom:20px">
+      <div class="rbi-signal">🪜 Ladder Summary</div>
+      <div style="display:flex;gap:24px;margin-top:8px">
+        <div><div class="stat-label">Total in Ladder</div><div style="font-family:Syne,sans-serif;font-size:18px;font-weight:700;color:var(--accent)">${fmt(totalLadder)}</div></div>
+        <div><div class="stat-label">Total Maturity</div><div style="font-family:Syne,sans-serif;font-size:18px;font-weight:700;color:var(--accent3)">${fmt(totalReturn)}</div></div>
+      </div>
+      <div class="rbi-text" style="margin-top:8px">Money matures every 3 months — reinvest or use as needed. This provides liquidity without sacrificing returns.</div>
+    </div>
+    ${grouped.map(g => `
+      <div style="margin-bottom:20px">
+        <div style="font-family:Space Mono,monospace;font-size:10px;letter-spacing:2px;color:var(--accent);margin-bottom:10px">RUNG — ${g.tenure} MONTHS</div>
+        ${g.items.map(item => `
+          <div class="ladder-item">
+            <div class="ladder-rung">${item.tenure}M</div>
+            <div class="ladder-info">
+              <div class="ladder-bank">${item.bank}</div>
+              <div class="ladder-amount">${fmt(item.amount)} @ ${item.rate}%</div>
+            </div>
+            <div class="ladder-return">${fmt(item.maturity_amount)}</div>
+          </div>
+        `).join('')}
+      </div>
+    `).join('')}
+  `;
+}
+
+function renderTax(tax) {
+  const el = document.getElementById('taxContent');
+  el.innerHTML = `
+    <div class="result-grid" style="margin-bottom:20px">
+      <div class="result-card">
+        <div class="stat-label">Est. Annual Interest</div>
+        <div class="val blue">${fmt(tax.interest)}</div>
+      </div>
+      <div class="result-card">
+        <div class="stat-label">TDS Applicable</div>
+        <div class="val ${tax.tds ? 'red' : 'green'}" style="color:${tax.tds ? 'var(--danger)' : 'var(--accent3)'}">${tax.tds ? 'YES' : 'NO'}</div>
+      </div>
+      <div class="result-card">
+        <div class="stat-label">Forms Needed</div>
+        <div class="val purple">${tax.forms.length > 0 ? tax.forms.join(', ') : 'None'}</div>
+      </div>
+    </div>
+    <div style="font-family:Syne,sans-serif;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:12px;text-transform:uppercase;letter-spacing:1px">Tax Advice</div>
+    ${tax.advice.map(a => `<div class="tax-advice-item">${a}</div>`).join('')}
+  `;
+}
+
+function renderCompare() {
+  const el = document.getElementById('compareBars');
+  const tenure = state.tenure;
+  const rows = FD_BANKS.map(b => {
+    const rate = b.rates[tenure] || b.rates[12];
+    const interest = state.amount * (rate/100) * (tenure/12);
+    return { ...b, rate, interest, maturity: state.amount + interest };
+  }).sort((a,b) => b.rate - a.rate);
+
+  const maxRate = rows[0].rate;
+  el.innerHTML = rows.map(r => `
+    <div class="compare-row">
+      <div class="compare-bank">${r.name}</div>
+      <div class="compare-bar-wrap">
+        <div class="compare-bar-bg">
+          <div class="compare-bar-fill" style="width:${(r.rate/maxRate)*100}%;background:${r.color}88"></div>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:3px">${fmt(Math.round(r.interest))} interest · ${fmt(Math.round(r.maturity))} maturity</div>
+      </div>
+      <div class="compare-rate">${r.rate}%</div>
+    </div>
+  `).join('');
+}
+
+// ── RBI SIGNAL ────────────────────────────────────────────────────────────────
+function loadRBISignal() {
+  document.getElementById('rbiRec').textContent = 'BOOK NOW';
+  document.getElementById('rbiText').textContent =
+    'Inflation within RBI\'s 4% ± 2% band. Repo rate at 6.25% — likely to hold through Q2 2026. Current FD rates near cycle peak. Lock 12–18M tenures now.';
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  loadRBISignal();
+  renderCompare();
+  document.getElementById('amountDisplay').textContent = fmt(state.amount);
+});
+</script>
+</body>
+</html>
